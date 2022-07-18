@@ -3,6 +3,9 @@ import pygame
 
 pygame.init()  # KB initialise pygame
 
+clock = pygame.time.Clock()  # KB creates an object to help track time
+fps = 60  # KB set frames per second to 60 fps
+
 screenWidth = 800  # KB1
 screenHeight = 800  # KB1
 
@@ -16,26 +19,38 @@ tile_size = 40  # KB2
 sun_img = pygame.image.load('img/sun.png')
 bg_img = pygame.image.load('img/sky.png')
 
-
+"""
 def draw_grid():  # KB creates a 20x20 square grid on the game window
     for line in range(0, 20):
         pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (screenWidth, line * tile_size))
         pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, screenHeight))
+"""
 
 
 class Player:  # KCB orig code class Player():
     def __init__(self, x, y):
-        img = pygame.image.load('img/guy1.png')
-        self.image = pygame.transform.scale(img, (32, 64))  # KB3
+        self.images_right = []
+        self.images_left = []
+        self.index = 0
+        self.counter = 0
+        for num in range(1, 5):  # KB num 1, 2, 3, 4
+            img_right = pygame.image.load(f'img/guy{num}.png')  # KB different player sprite moving appearance
+            img_right = pygame.transform.scale(img_right, (32, 64))  # KB3 animate player moving right
+            img_left = pygame.transform.flip(img_right, True, False)  # KB animate player moving left
+            self.images_right.append(img_right)  # KB stores the four images of player moving right
+            self.images_left.append(img_left)  # KB stores the four images of player moving left
+        self.image = self.images_right[self.index]
         self.rect = self.image.get_rect()  # KB creates rectangle around player
         self.rect.x = x
         self.rect.y = y
         self.vel_y = 0
         self.jumped = False
+        self.direction = 0
 
     def update(self):
         dx = 0  # KB variable for player's change in x
         dy = 0  # KB variable for player's change in y
+        walk_cooldown = 5  # KB limits speed of player animation
 
         # get key presses
         key = pygame.key.get_pressed()
@@ -46,8 +61,30 @@ class Player:  # KCB orig code class Player():
             self.jumped = False
         if key[pygame.K_LEFT]:  # KB player moves left on left key pressed
             dx -= 5
+            self.counter += 1  # KB switches between player sprite images to create animation
+            self.direction = -1  # KB detects change in direction
         if key[pygame.K_RIGHT]:  # KB player moves right on right key pressed
             dx += 5
+            self.counter += 1  # KB switches between player sprite images to create animation
+            self.direction = 1  # KB detects change in direction
+        if key[pygame.K_LEFT] is False and key[pygame.K_RIGHT] is False:
+            self.counter = 0
+            self.index = 0
+            if self.direction == 1:  # KB when player is stationary it will face previous direction traversed
+                self.image = self.images_right[self.index]
+            if self.direction == -1:  # KB when player is stationary it will face previous direction traversed
+                self.image = self.images_left[self.index]
+
+        # handle animation
+        if self.counter > walk_cooldown:
+            self.counter = 0
+            self.index += 1
+            if self.index >= len(self.images_right):
+                self.index = 0
+            if self.direction == 1:  # KB changes player sprite to face right
+                self.image = self.images_right[self.index]
+            if self.direction == -1:  # KB changes player sprite to face left
+                self.image = self.images_left[self.index]
 
         # add gravity
         self.vel_y += 1
@@ -102,6 +139,7 @@ class World:  # KCB orig code: class World():
         for tile in self.tile_list:
             screen.blit(tile[0], tile[1])
 
+
 # KB initial layout of the screen with several images
 # 1 is 'img/dirt.png';  2 is 'img/grass.png'
 world_data = [
@@ -135,12 +173,12 @@ world = World(world_data)
 run = True
 while run:
 
+    clock.tick(fps)  # KB let pygame control frame per second (fps)
+
     screen.blit(bg_img, (0, 0))
     screen.blit(sun_img, (100, 100))
 
     world.draw()  # KB calls draw method to create initial screen based on the world map
-
-    draw_grid()  # KB draws grid on screen
 
     player.update()  # KB calls update method to put player on screen
 
