@@ -13,7 +13,7 @@ screen = pygame.display.set_mode((screenWidth, screenHeight))  # KB creates game
 pygame.display.set_caption('Platformer')  # KB names game window 'Platformer'
 
 # define game variables
-tile_size = 40  # KB2
+tileSize = 40  # KB2
 
 # load images
 sun_img = pygame.image.load('img/sun.png')
@@ -22,8 +22,8 @@ bg_img = pygame.image.load('img/sky.png')
 """
 def draw_grid():  # KB creates a 20x20 square grid on the game window
     for line in range(0, 20):
-        pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (screenWidth, line * tile_size))
-        pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, screenHeight))
+        pygame.draw.line(screen, (255, 255, 255), (0, line * tileSize), (screenWidth, line * tileSize))
+        pygame.draw.line(screen, (255, 255, 255), (line * tileSize, 0), (line * tileSize, screenHeight))
 """
 
 
@@ -43,6 +43,8 @@ class Player:  # KCB orig code class Player():
         self.rect = self.image.get_rect()  # KB creates rectangle around player
         self.rect.x = x
         self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
         self.vel_y = 0
         self.jumped = False
         self.direction = 0
@@ -93,6 +95,20 @@ class Player:  # KCB orig code class Player():
         dy += self.vel_y
 
         # check for collision
+        for tile in world.tile_list:
+            # check for collision in x direction
+            if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
+                dx = 0  # KB sets character's change in x back to 0
+            # check for collision in y direction
+            if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
+                # check if below the ground i.e. jumping
+                if self.vel_y < 0:
+                    dy = tile[1].bottom - self.rect.top
+                    self.vel_y = 0
+                # check if above the ground i.e. falling
+                elif self.vel_y >= 0:
+                    dy = tile[1].top - self.rect.bottom
+                    self.vel_y = 0
 
         # update player coordinates
         self.rect.x += dx
@@ -104,6 +120,7 @@ class Player:  # KCB orig code class Player():
 
         # draw player onto screen
         screen.blit(self.image, self.rect)
+        pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)  # KB draws rectangle around player
 
 
 class World:  # KCB orig code: class World():
@@ -119,17 +136,17 @@ class World:  # KCB orig code: class World():
             col_count = 0
             for tile in row:
                 if tile == 1:
-                    img = pygame.transform.scale(dirt_img, (tile_size, tile_size))
+                    img = pygame.transform.scale(dirt_img, (tileSize, tileSize))
                     img_rect = img.get_rect()  # KB creates a rectangle out of the image
-                    img_rect.x = col_count * tile_size  # KB calculates the x coordinate of tile rectangle on the screen
-                    img_rect.y = row_count * tile_size  # KB calculates the y coordinate of tile rectangle on the screen
+                    img_rect.x = col_count * tileSize  # KB calculates the x coordinate of tile rectangle on the screen
+                    img_rect.y = row_count * tileSize  # KB calculates the y coordinate of tile rectangle on the screen
                     tile = (img, img_rect)  # KB tuple that store the image and the position of the rectangle
                     self.tile_list.append(tile)  # KB adds the image and position (tuple) to the list
                 if tile == 2:
-                    img = pygame.transform.scale(grass_img, (tile_size, tile_size))
+                    img = pygame.transform.scale(grass_img, (tileSize, tileSize))
                     img_rect = img.get_rect()
-                    img_rect.x = col_count * tile_size
-                    img_rect.y = row_count * tile_size
+                    img_rect.x = col_count * tileSize
+                    img_rect.y = row_count * tileSize
                     tile = (img, img_rect)  # KB tuple that store the image and the position of the rectangle
                     self.tile_list.append(tile)
                 col_count += 1
@@ -138,6 +155,7 @@ class World:  # KCB orig code: class World():
     def draw(self):
         for tile in self.tile_list:
             screen.blit(tile[0], tile[1])
+            pygame.draw.rect(screen, (255, 255, 255), tile[1], 2)  # KB draws rectangle around each tile
 
 
 # KB initial layout of the screen with several images
