@@ -16,8 +16,10 @@ pygame.display.set_caption('Platformer')  # KB names game window 'Platformer'
 tileSize = 40  # KB2
 
 # load images
-sun_img = pygame.image.load('img/sun.png')
-bg_img = pygame.image.load('img/sky.png')
+# sun_img = pygame.image.load('img/sun.png')
+bg_img = pygame.image.load('images/bluebg.jpg')
+bg_img = pygame.transform.scale(bg_img, (800,800))
+
 
 """
 def draw_grid():  # KB creates a 20x20 square grid on the game window
@@ -128,8 +130,8 @@ class World:  # KCB orig code: class World():
         self.tile_list = []
 
         # load images
-        dirt_img = pygame.image.load('img/dirt.png')
-        grass_img = pygame.image.load('img/grass.png')
+        dirt_img = pygame.image.load('images/dirtblock.png')
+        grass_img = pygame.image.load('images/grassblock.png')
 
         row_count = 0
         for row in data:
@@ -149,6 +151,9 @@ class World:  # KCB orig code: class World():
                     img_rect.y = row_count * tileSize
                     tile = (img, img_rect)  # KB tuple that store the image and the position of the rectangle
                     self.tile_list.append(tile)
+                if tile == 3:
+                    blob = Enemy(col_count * tileSize, row_count * tileSize + 15)
+                    blob_group.add(blob)
                 col_count += 1
             row_count += 1
 
@@ -156,6 +161,25 @@ class World:  # KCB orig code: class World():
         for tile in self.tile_list:
             screen.blit(tile[0], tile[1])
             pygame.draw.rect(screen, (255, 255, 255), tile[1], 2)  # KB draws rectangle around each tile
+
+
+class Enemy(pygame.sprite.Sprite):  # KB uses pygame inbuilt sprite objects
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load('img/blob.png')
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.move_direction = 1  # KB variable used for enemy motion
+        self.move_counter = 0  # KB variable used control enemy movement direction
+
+    def update(self):
+        self.rect.x += self.move_direction
+        self.move_counter += 1  # KB moves enemy by one pixel
+        if abs(self.move_counter) > 50:  # KB makes enemy move in opposite direction when enemy mvmnt exceeds 50 pixels
+            self.move_direction *= -1
+            self.move_counter *= -1
+        pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)
 
 
 # KB initial layout of the screen with several images
@@ -185,6 +209,7 @@ world_data = [
 
 # KB creates instances
 player = Player(100, screenHeight - 130)
+blob_group = pygame.sprite.Group()  # KB creates an instance of empty list of enemy sprites
 world = World(world_data)
 
 # KB game loop
@@ -194,9 +219,12 @@ while run:
     clock.tick(fps)  # KB let pygame control frame per second (fps)
 
     screen.blit(bg_img, (0, 0))
-    screen.blit(sun_img, (100, 100))
+    # screen.blit(sun_img, (100, 100))
 
     world.draw()  # KB calls draw method to create initial screen based on the world map
+
+    blob_group.update()  # KB calls update method from Enemy object
+    blob_group.draw(screen)  # KB calls draw method to draw enemies
 
     player.update()  # KB calls update method to put player on screen
 
