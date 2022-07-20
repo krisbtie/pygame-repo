@@ -14,6 +14,7 @@ pygame.display.set_caption('Platformer')  # KB names game window 'Platformer'
 
 # define game variables
 tileSize = 40  # KB2
+game_over = 0
 
 # load images
 # sun_img = pygame.image.load('img/sun.png')
@@ -41,6 +42,7 @@ class Player:  # KCB orig code class Player():
             img_left = pygame.transform.flip(img_right, True, False)  # KB animate player moving left
             self.images_right.append(img_right)  # KB stores the four images of player moving right
             self.images_left.append(img_left)  # KB stores the four images of player moving left
+        self.dead_image = pygame.image.load('img/ghost.png')
         self.image = self.images_right[self.index]
         self.rect = self.image.get_rect()  # KB creates rectangle around player
         self.rect.x = x
@@ -51,78 +53,90 @@ class Player:  # KCB orig code class Player():
         self.jumped = False
         self.direction = 0
 
-    def update(self):
+    def update(self, game_over):
         dx = 0  # KB variable for player's change in x
         dy = 0  # KB variable for player's change in y
         walk_cooldown = 5  # KB limits speed of player animation
 
-        # get key presses
-        key = pygame.key.get_pressed()
-        if key[pygame.K_SPACE] and self.jumped is False:  # KCB orig : if key[pygame.K_SPACE] and self.jumped == False:
-            self.vel_y = -15
-            self.jumped = True
-        if key[pygame.K_SPACE] is False:  # KCB orig : if key[pygame.K_SPACE] == False:
-            self.jumped = False
-        if key[pygame.K_LEFT]:  # KB player moves left on left key pressed
-            dx -= 5
-            self.counter += 1  # KB switches between player sprite images to create animation
-            self.direction = -1  # KB detects change in direction
-        if key[pygame.K_RIGHT]:  # KB player moves right on right key pressed
-            dx += 5
-            self.counter += 1  # KB switches between player sprite images to create animation
-            self.direction = 1  # KB detects change in direction
-        if key[pygame.K_LEFT] is False and key[pygame.K_RIGHT] is False:
-            self.counter = 0
-            self.index = 0
-            if self.direction == 1:  # KB when player is stationary it will face previous direction traversed
-                self.image = self.images_right[self.index]
-            if self.direction == -1:  # KB when player is stationary it will face previous direction traversed
-                self.image = self.images_left[self.index]
-
-        # handle animation
-        if self.counter > walk_cooldown:
-            self.counter = 0
-            self.index += 1
-            if self.index >= len(self.images_right):
+        if game_over == 0:
+            # get key presses
+            key = pygame.key.get_pressed()
+            if key[pygame.K_SPACE] and self.jumped is False:  # KCB orig : if key[pygame.K_SPACE] and self.jumped == False:
+                self.vel_y = -15
+                self.jumped = True
+            if key[pygame.K_SPACE] is False:  # KCB orig : if key[pygame.K_SPACE] == False:
+                self.jumped = False
+            if key[pygame.K_LEFT]:  # KB player moves left on left key pressed
+                dx -= 5
+                self.counter += 1  # KB switches between player sprite images to create animation
+                self.direction = -1  # KB detects change in direction
+            if key[pygame.K_RIGHT]:  # KB player moves right on right key pressed
+                dx += 5
+                self.counter += 1  # KB switches between player sprite images to create animation
+                self.direction = 1  # KB detects change in direction
+            if key[pygame.K_LEFT] is False and key[pygame.K_RIGHT] is False:
+                self.counter = 0
                 self.index = 0
-            if self.direction == 1:  # KB changes player sprite to face right
-                self.image = self.images_right[self.index]
-            if self.direction == -1:  # KB changes player sprite to face left
-                self.image = self.images_left[self.index]
+                if self.direction == 1:  # KB when player is stationary it will face previous direction traversed
+                    self.image = self.images_right[self.index]
+                if self.direction == -1:  # KB when player is stationary it will face previous direction traversed
+                    self.image = self.images_left[self.index]
 
-        # add gravity
-        self.vel_y += 1
-        if self.vel_y > 10:
-            self.vel_y = 10
-        dy += self.vel_y
+            # handle animation
+            if self.counter > walk_cooldown:
+                self.counter = 0
+                self.index += 1
+                if self.index >= len(self.images_right):
+                    self.index = 0
+                if self.direction == 1:  # KB changes player sprite to face right
+                    self.image = self.images_right[self.index]
+                if self.direction == -1:  # KB changes player sprite to face left
+                    self.image = self.images_left[self.index]
 
-        # check for collision
-        for tile in world.tile_list:
-            # check for collision in x direction
-            if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
-                dx = 0  # KB sets character's change in x back to 0
-            # check for collision in y direction
-            if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
-                # check if below the ground i.e. jumping
-                if self.vel_y < 0:
-                    dy = tile[1].bottom - self.rect.top
-                    self.vel_y = 0
-                # check if above the ground i.e. falling
-                elif self.vel_y >= 0:
-                    dy = tile[1].top - self.rect.bottom
-                    self.vel_y = 0
+            # add gravity
+            self.vel_y += 1
+            if self.vel_y > 10:
+                self.vel_y = 10
+            dy += self.vel_y
 
-        # update player coordinates
-        self.rect.x += dx
-        self.rect.y += dy
+            # check for collision
+            for tile in world.tile_list:
+                # check for collision in x direction
+                if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
+                    dx = 0  # KB sets character's change in x back to 0
+                # check for collision in y direction
+                if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
+                    # check if below the ground i.e. jumping
+                    if self.vel_y < 0:
+                        dy = tile[1].bottom - self.rect.top
+                        self.vel_y = 0
+                    # check if above the ground i.e. falling
+                    elif self.vel_y >= 0:
+                        dy = tile[1].top - self.rect.bottom
+                        self.vel_y = 0
 
-        if self.rect.bottom > screenHeight:  # stops player from falling off the screen
-            self.rect.bottom = screenHeight
-            dy = 0
+            # check if player collided with enemies
+            if pygame.sprite.spritecollide(self, blob_group, False):
+                game_over = -1
+
+            # check if player collided with lava
+            if pygame.sprite.spritecollide(self, lava_group, False):
+                game_over = -1
+
+            # update player coordinates
+            self.rect.x += dx
+            self.rect.y += dy
+
+        elif game_over == -1:  # KB changes player sprite to ghost upon dying
+            self.image = self.dead_image
+            if self.rect.y > 200:  # KB causes the player's soul to ascend
+                self.rect.y -= 5
 
         # draw player onto screen
         screen.blit(self.image, self.rect)
         pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)  # KB draws rectangle around player
+
+        return game_over
 
 
 class World:  # KCB orig code: class World():
@@ -154,6 +168,9 @@ class World:  # KCB orig code: class World():
                 if tile == 3:
                     blob = Enemy(col_count * tileSize, row_count * tileSize + 15)
                     blob_group.add(blob)
+                if tile == 6:
+                    lava = Lava(col_count * tileSize, row_count * tileSize + (tileSize // 2))
+                    lava_group.add(lava)
                 col_count += 1
             row_count += 1
 
@@ -180,6 +197,16 @@ class Enemy(pygame.sprite.Sprite):  # KB uses pygame inbuilt sprite objects
             self.move_direction *= -1
             self.move_counter *= -1
         pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)
+
+
+class Lava(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        img = pygame.image.load('img/lava.png')
+        self.image = pygame.transform.scale(img, (tileSize, tileSize // 2))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
 
 
 # KB initial layout of the screen with several images
@@ -210,6 +237,7 @@ world_data = [
 # KB creates instances
 player = Player(100, screenHeight - 130)
 blob_group = pygame.sprite.Group()  # KB creates an instance of empty list of enemy sprites
+lava_group = pygame.sprite.Group()
 world = World(world_data)
 
 # KB game loop
@@ -225,8 +253,9 @@ while run:
 
     blob_group.update()  # KB calls update method from Enemy object
     blob_group.draw(screen)  # KB calls draw method to draw enemies
+    lava_group.draw(screen)
 
-    player.update()  # KB calls update method to put player on screen
+    game_over = player.update(game_over)  # KB calls update method to put player on screen
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
