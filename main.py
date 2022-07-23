@@ -15,12 +15,17 @@ pygame.display.set_caption('Platformer')  # KB names game window 'Platformer'
 # define game variables
 tileSize = 40  # KB2
 game_over = 0
+main_menu = True
 
 # load images
 # sun_img = pygame.image.load('img/sun.png')
 bg_img = pygame.image.load('images/bluebg.jpg')
-bg_img = pygame.transform.scale(bg_img, (800,800))
-
+bg_img = pygame.transform.scale(bg_img, (800, 800))
+restart_img = pygame.image.load('img/restart_btn.png')
+start_img = pygame.image.load('images/playbut.png')
+start_img = pygame.transform.scale(start_img, (300,150))
+exit_img = pygame.image.load('images/quitbut.png')
+exit_img = pygame.transform.scale(exit_img, (300,150))
 
 """
 def draw_grid():  # KB creates a 20x20 square grid on the game window
@@ -30,28 +35,38 @@ def draw_grid():  # KB creates a 20x20 square grid on the game window
 """
 
 
-class Player:  # KCB orig code class Player():
-    def __init__(self, x, y):
-        self.images_right = []
-        self.images_left = []
-        self.index = 0
-        self.counter = 0
-        for num in range(1, 5):  # KB num 1, 2, 3, 4
-            img_right = pygame.image.load(f'img/guy{num}.png')  # KB different player sprite moving appearance
-            img_right = pygame.transform.scale(img_right, (32, 64))  # KB3 animate player moving right
-            img_left = pygame.transform.flip(img_right, True, False)  # KB animate player moving left
-            self.images_right.append(img_right)  # KB stores the four images of player moving right
-            self.images_left.append(img_left)  # KB stores the four images of player moving left
-        self.dead_image = pygame.image.load('img/ghost.png')
-        self.image = self.images_right[self.index]
-        self.rect = self.image.get_rect()  # KB creates rectangle around player
+class Button:
+    def __init__(self, x, y, image):
+        self.image = image
+        self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.width = self.image.get_width()
-        self.height = self.image.get_height()
-        self.vel_y = 0
-        self.jumped = False
-        self.direction = 0
+        self.clicked = False
+
+    def draw(self):
+        action = False
+
+        # gets position of mouse
+        pos = pygame.mouse.get_pos()
+
+        # check mouse collisions and clicked conditions
+        if self.rect.collidepoint(pos):
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked is False:
+                action = True
+                self.clicked = True
+
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.clicked = False
+
+        # draw button
+        screen.blit(self.image, self.rect)
+
+        return action
+
+
+class Player:  # KCB orig code class Player():
+    def __init__(self, x, y):
+        self.reset(x, y)
 
     def update(self, game_over):
         dx = 0  # KB variable for player's change in x
@@ -61,7 +76,7 @@ class Player:  # KCB orig code class Player():
         if game_over == 0:
             # get key presses
             key = pygame.key.get_pressed()
-            if key[pygame.K_SPACE] and self.jumped is False:  # KCB orig : if key[pygame.K_SPACE] and self.jumped == False:
+            if key[pygame.K_SPACE] and self.jumped is False and self.in_air is False:
                 self.vel_y = -15
                 self.jumped = True
             if key[pygame.K_SPACE] is False:  # KCB orig : if key[pygame.K_SPACE] == False:
@@ -100,6 +115,7 @@ class Player:  # KCB orig code class Player():
             dy += self.vel_y
 
             # check for collision
+            self.in_air = True
             for tile in world.tile_list:
                 # check for collision in x direction
                 if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
@@ -114,6 +130,7 @@ class Player:  # KCB orig code class Player():
                     elif self.vel_y >= 0:
                         dy = tile[1].top - self.rect.bottom
                         self.vel_y = 0
+                        self.in_air = False
 
             # check if player collided with enemies
             if pygame.sprite.spritecollide(self, blob_group, False):
@@ -138,6 +155,28 @@ class Player:  # KCB orig code class Player():
 
         return game_over
 
+    def reset(self, x,y):
+        self.images_right = []
+        self.images_left = []
+        self.index = 0
+        self.counter = 0
+        for num in range(1, 5):  # KB num 1, 2, 3, 4
+            img_right = pygame.image.load(f'img/guy{num}.png')  # KB different player sprite moving appearance
+            img_right = pygame.transform.scale(img_right, (32, 64))  # KB3 animate player moving right
+            img_left = pygame.transform.flip(img_right, True, False)  # KB animate player moving left
+            self.images_right.append(img_right)  # KB stores the four images of player moving right
+            self.images_left.append(img_left)  # KB stores the four images of player moving left
+        self.dead_image = pygame.image.load('img/ghost.png')
+        self.image = self.images_right[self.index]
+        self.rect = self.image.get_rect()  # KB creates rectangle around player
+        self.rect.x = x
+        self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.vel_y = 0
+        self.jumped = False
+        self.direction = 0
+        self.in_air = True
 
 class World:  # KCB orig code: class World():
     def __init__(self, data):
@@ -240,6 +279,11 @@ blob_group = pygame.sprite.Group()  # KB creates an instance of empty list of en
 lava_group = pygame.sprite.Group()
 world = World(world_data)
 
+# create buttons
+restart_button = Button(screenWidth // 2 - 50, screenHeight // 2 + 100, restart_img)
+start_button = Button(screenWidth // 2 - 350, screenHeight // 2, start_img)
+exit_button = Button(screenWidth // 2 + 50, screenHeight // 2, exit_img)
+
 # KB game loop
 run = True
 while run:
@@ -249,13 +293,28 @@ while run:
     screen.blit(bg_img, (0, 0))
     # screen.blit(sun_img, (100, 100))
 
-    world.draw()  # KB calls draw method to create initial screen based on the world map
+    if main_menu == True:
+        if exit_button.draw():
+            run = False
+        if start_button.draw():
+            main_menu = False
 
-    blob_group.update()  # KB calls update method from Enemy object
-    blob_group.draw(screen)  # KB calls draw method to draw enemies
-    lava_group.draw(screen)
+    else:
+        world.draw()  # KB calls draw method to create initial screen based on the world map
 
-    game_over = player.update(game_over)  # KB calls update method to put player on screen
+        if game_over == 0:
+            blob_group.update()
+
+        blob_group.draw(screen)  # KB calls draw function for blob group
+        lava_group.draw(screen)  # KB calls draw function for lava group
+
+        game_over = player.update(game_over)
+
+        # if player has died
+        if game_over == -1:
+            if restart_button.draw():
+                player.reset(100, screenHeight - 130)
+                game_over = 0
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
