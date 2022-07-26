@@ -1,5 +1,7 @@
 import pygame
 # from pygame.locals import * : KCB originally not commented
+import pickle  # KB pickle is an in-built Python module for serializing and deserializing object structures
+from os import path  # KB operating system module
 
 pygame.init()  # KB initialise pygame
 
@@ -16,6 +18,8 @@ pygame.display.set_caption('Platformer')  # KB names game window 'Platformer'
 tileSize = 40  # KB2
 game_over = 0
 main_menu = True
+level = 1
+max_levels = 7
 
 # load images
 # sun_img = pygame.image.load('img/sun.png')
@@ -23,9 +27,9 @@ bg_img = pygame.image.load('images/bluebg.jpg')
 bg_img = pygame.transform.scale(bg_img, (800, 800))
 restart_img = pygame.image.load('img/restart_btn.png')
 start_img = pygame.image.load('images/playbut.png')
-start_img = pygame.transform.scale(start_img, (300,150))
+start_img = pygame.transform.scale(start_img, (300, 150))
 exit_img = pygame.image.load('images/quitbut.png')
-exit_img = pygame.transform.scale(exit_img, (300,150))
+exit_img = pygame.transform.scale(exit_img, (300, 150))
 
 """
 def draw_grid():  # KB creates a 20x20 square grid on the game window
@@ -33,6 +37,22 @@ def draw_grid():  # KB creates a 20x20 square grid on the game window
         pygame.draw.line(screen, (255, 255, 255), (0, line * tileSize), (screenWidth, line * tileSize))
         pygame.draw.line(screen, (255, 255, 255), (line * tileSize, 0), (line * tileSize, screenHeight))
 """
+
+
+# function that resets the level
+def reset_level(level):
+    player.reset(100, screenHeight - 130)
+    blob_group.empty()
+    lava_group.empty()
+    exit_group.empty()
+
+    # load in level data and create world
+    if path.exists(f'level{level}_data'):
+        pickle_in = open(f'level{level}_data', 'rb')
+        world_data = pickle.load(pickle_in)
+    world = World(world_data)
+
+    return world
 
 
 class Button:
@@ -140,6 +160,10 @@ class Player:  # KCB orig code class Player():
             if pygame.sprite.spritecollide(self, lava_group, False):
                 game_over = -1
 
+            # check for collision with exit
+            if pygame.sprite.spritecollide(self, exit_group, False):
+                game_over = 1
+
             # update player coordinates
             self.rect.x += dx
             self.rect.y += dy
@@ -178,6 +202,7 @@ class Player:  # KCB orig code class Player():
         self.direction = 0
         self.in_air = True
 
+
 class World:  # KCB orig code: class World():
     def __init__(self, data):
         self.tile_list = []
@@ -210,6 +235,9 @@ class World:  # KCB orig code: class World():
                 if tile == 6:
                     lava = Lava(col_count * tileSize, row_count * tileSize + (tileSize // 2))
                     lava_group.add(lava)
+                if tile == 8:
+                    exit = Exit(col_count * tileSize, row_count * tileSize - (tileSize // 2))
+                    exit_group.add(exit)
                 col_count += 1
             row_count += 1
 
@@ -247,9 +275,19 @@ class Lava(pygame.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y
 
+class Exit(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        img = pygame.image.load('img/exit.png')
+        self.image = pygame.transform.scale(img, (tileSize, int(tileSize * 1.5)))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
 
 # KB initial layout of the screen with several images
 # 1 is 'img/dirt.png';  2 is 'img/grass.png'
+"""
 world_data = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -272,11 +310,19 @@ world_data = [
     [1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ]
+"""
 
 # KB creates instances
 player = Player(100, screenHeight - 130)
+
 blob_group = pygame.sprite.Group()  # KB creates an instance of empty list of enemy sprites
 lava_group = pygame.sprite.Group()
+exit_group = pygame.sprite.Group()
+
+# load in level data and create world
+if path.exists(f'level{level}_data'):
+    pickle_in = open(f'level{level}_data', 'rb')
+    world_data = pickle.load(pickle_in)
 world = World(world_data)
 
 # create buttons
@@ -293,7 +339,7 @@ while run:
     screen.blit(bg_img, (0, 0))
     # screen.blit(sun_img, (100, 100))
 
-    if main_menu == True:
+    if main_menu is True:
         if exit_button.draw():
             run = False
         if start_button.draw():
@@ -307,14 +353,33 @@ while run:
 
         blob_group.draw(screen)  # KB calls draw function for blob group
         lava_group.draw(screen)  # KB calls draw function for lava group
+        exit_group.draw(screen)  # KB calls draw function for exit group
 
         game_over = player.update(game_over)
 
         # if player has died
         if game_over == -1:
             if restart_button.draw():
-                player.reset(100, screenHeight - 130)
+                world_data = []
+                world = reset_level(level)
                 game_over = 0
+
+        #  if player has completed the level
+        if game_over == 1:
+            # reset game and go to next level
+            level += 1
+            if level <= max_levels:
+                # reset level
+                world_data = []
+                world = reset_level(level)
+                game_over = 0
+            else:
+                if restart_button.draw():
+                    level = 1
+                    # reset level
+                    world_data = []
+                    world = reset_level(level)
+                    game_over = 0
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
