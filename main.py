@@ -1,8 +1,11 @@
 import pygame
 # from pygame.locals import * : KCB originally not commented
+from pygame import mixer  # KB pygame module for audio
 import pickle  # KB pickle is an in-built Python module for serializing and deserializing object structures
 from os import path  # KB operating system module
 
+pygame.mixer.pre_init(44100, -16, 2, 512)
+mixer.init()  # KB initialises pygame mixer
 pygame.init()  # KB initialise pygame
 
 clock = pygame.time.Clock()  # KB creates an object to help track time
@@ -31,6 +34,20 @@ start_img = pygame.transform.scale(start_img, (300, 150))
 exit_img = pygame.image.load('images/quitbut.png')
 exit_img = pygame.transform.scale(exit_img, (300, 150))
 
+
+# load sounds
+# pygame.mixer.music.load('img/music.wav')
+pygame.mixer.music.load('images/Girl_from_Petaluma.mp3')
+pygame.mixer.music.play(-1, 0.0, 5000)
+pygame.mixer.music.set_volume(0.5)
+coin_fx = pygame.mixer.Sound('img/coin.wav')
+coin_fx.set_volume(0.5)  # KB reduces volume by a half
+jump_fx = pygame.mixer.Sound('img/jump.wav')
+jump_fx.set_volume(0.5)
+game_over_fx = pygame.mixer.Sound('img/game_over.wav')
+game_over_fx.set_volume(0.5)
+
+
 """
 def draw_grid():  # KB creates a 20x20 square grid on the game window
     for line in range(0, 20):
@@ -41,7 +58,10 @@ def draw_grid():  # KB creates a 20x20 square grid on the game window
 
 # function that resets the level
 def reset_level(level):
-    player.reset(100, screenHeight - 130)
+    if level == 5:
+        player.reset(100, screenHeight - 670)
+    else:
+        player.reset(100, screenHeight - 130)
     blob_group.empty()
     lava_group.empty()
     exit_group.empty()
@@ -97,6 +117,7 @@ class Player:  # KCB orig code class Player():
             # get key presses
             key = pygame.key.get_pressed()
             if key[pygame.K_SPACE] and self.jumped is False and self.in_air is False:
+                jump_fx.play()
                 self.vel_y = -15
                 self.jumped = True
             if key[pygame.K_SPACE] is False:  # KCB orig : if key[pygame.K_SPACE] == False:
@@ -155,10 +176,12 @@ class Player:  # KCB orig code class Player():
             # check if player collided with enemies
             if pygame.sprite.spritecollide(self, blob_group, False):
                 game_over = -1
+                game_over_fx.play()
 
             # check if player collided with lava
             if pygame.sprite.spritecollide(self, lava_group, False):
                 game_over = -1
+                game_over_fx.play()
 
             # check for collision with exit
             if pygame.sprite.spritecollide(self, exit_group, False):
@@ -313,7 +336,11 @@ world_data = [
 """
 
 # KB creates instances
-player = Player(100, screenHeight - 130)
+if level == 5:
+    player = Player(100, screenHeight - 670)
+else:
+    player = Player(100, screenHeight - 130)
+#  player = Player(100, screenHeight - 130)
 
 blob_group = pygame.sprite.Group()  # KB creates an instance of empty list of enemy sprites
 lava_group = pygame.sprite.Group()
