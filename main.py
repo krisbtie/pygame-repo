@@ -18,7 +18,8 @@ screen = pygame.display.set_mode((screenWidth, screenHeight))  # KB creates game
 pygame.display.set_caption('Platformer')  # KB names game window 'Platformer'
 
 # define font
-font = pygame.font.SysFont('Comic Sans MS', 70)
+# font = pygame.font.SysFont('Arial', 50)
+font1 = pygame.font.SysFont('Comic Sans MS', 50)
 font_score = pygame.font.SysFont('Comic Sans MS', 30)
 
 # define game variables
@@ -33,6 +34,7 @@ score = 0
 white = (255, 255, 255)
 blue = (0, 0, 255)
 red = (255, 0, 0)
+yellow = (255, 255, 0)
 
 # load images
 # sun_img = pygame.image.load('img/sun.png')
@@ -208,7 +210,7 @@ class Player:  # KCB orig code class Player():
 
         elif game_over == -1:  # KB changes player sprite to ghost upon dying
             self.image = self.dead_image
-            draw_text('GAME OVER!', font, red, (screenWidth // 2) - 200, screenHeight // 2)
+            draw_text('GAME OVER', font1, white, (screenWidth // 2 - 150), screenHeight - 700)
             if self.rect.y > 200:  # KB causes the player's soul to ascend
                 self.rect.y -= 5
 
@@ -377,7 +379,7 @@ coin_group = pygame.sprite.Group()
 exit_group = pygame.sprite.Group()
 
 # create coin icon for showing the score
-score_coin = Coin(tileSize // 2, tileSize // 2)
+score_coin = Coin(tileSize * 2.5, tileSize * 1.5)
 coin_group.add(score_coin)
 
 # load in level data and create world
@@ -416,7 +418,7 @@ while run:
             if pygame.sprite.spritecollide(player, coin_group, True):
                 score += 1
                 coin_fx.play()
-            draw_text('X ' + str(score), font_score, white, tileSize - 8, 2)
+            draw_text(str(score), font_score, white, tileSize + 9, tileSize - 2)
 
         coin_group.draw(screen)  # KB calls draw function for coin group
         blob_group.draw(screen)  # KB calls draw function for blob group
@@ -442,7 +444,7 @@ while run:
                 world = reset_level(level)
                 game_over = 0
             else:
-                draw_text('YOU WIN!', font, blue, (screenWidth // 2) - 140, screenHeight // 2)
+                draw_text('YOU WIN!', font1, yellow, (screenWidth // 2 - 115), screenHeight - 700)
                 if restart_button.draw():
                     level = 1
                     # reset level
