@@ -10,7 +10,7 @@ gameLoop = 0  # KB variable to control the main game loop
 score = 0
 blockSize = 40  # KB2
 mainMenu = True
-level = 6
+level = 1
 maxLevel = 6
 gameOver = 0
 
